@@ -1,6 +1,14 @@
 ﻿import assert from 'node:assert/strict';
 import { writeFile, mkdir } from 'node:fs/promises';
-const base = 'http://127.0.0.1:3000';
+const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:3000';
+const health = await fetch(base + '/api/health').then((response) =>
+  response.json(),
+);
+assert.equal(
+  health.demo,
+  true,
+  'Flow tests require a local demo server; they must not create accounts in a live database.',
+);
 class Client {
   cookie = '';
   async request(path: string, body?: unknown) {

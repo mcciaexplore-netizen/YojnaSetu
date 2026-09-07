@@ -1,18 +1,25 @@
+import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import type { User } from '@/types';
 import { demoTransaction, hash } from './demo-store';
-export const liveConfigured = () =>
+import { anyNeonConfigured, neonConfigured } from './backend-config';
+import { neonIdentity, neonSiteOrigin } from './neon-auth';
+export const supabaseConfigured = () =>
   !!(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   );
+export const liveConfigured = () =>
+  neonConfigured() || (!anyNeonConfigured() && supabaseConfigured());
 export const demoEnabled = () =>
+  !anyNeonConfigured() &&
   !liveConfigured() &&
   process.env.DEMO_MODE === 'true' &&
   process.env.NODE_ENV !== 'production';
 export function siteOrigin(request: NextRequest) {
+  if (anyNeonConfigured()) return neonSiteOrigin(request);
   return new URL(process.env.NEXT_PUBLIC_SITE_URL || request.url).origin;
 }
 export function supabase(request: NextRequest, response: NextResponse) {
@@ -40,7 +47,12 @@ export async function identity(
   request: NextRequest,
   response: NextResponse,
 ): Promise<User | null> {
-  if (liveConfigured()) {
+  if (neonConfigured()) return neonIdentity(request, response);
+  if (anyNeonConfigured())
+    throw new Error(
+      'Complete the Neon database and authentication settings first.',
+    );
+  if (supabaseConfigured()) {
     const client = supabase(request, response);
     const {
       data: { user },

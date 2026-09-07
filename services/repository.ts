@@ -1,7 +1,10 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import type { AppData, User, UserData, Scheme, Enquiry } from '@/types';
-import { demoEnabled, supabase } from './auth';
+import { demoEnabled, supabase, identity } from './auth';
+import { anyNeonConfigured } from './backend-config';
+import { neonStore } from './neon-db';
+import { neonAppData } from './neon-repository';
 import { demoTransaction, emptyData } from './demo-store';
 import { industries, states, objectives } from '@/lib/validation';
 export async function catalogue(
@@ -9,6 +12,8 @@ export async function catalogue(
   res: NextResponse,
   admin = false,
 ): Promise<Scheme[]> {
+  if (anyNeonConfigured())
+    return neonStore().catalogue(admin ? await identity(req, res) : null);
   if (demoEnabled())
     return demoTransaction((db) =>
       db.schemes.filter(
@@ -25,6 +30,7 @@ export async function userData(
   res: NextResponse,
   user: User,
 ): Promise<{ data: UserData; version: number }> {
+  if (anyNeonConfigured()) return neonStore().userData(user);
   if (demoEnabled())
     return demoTransaction((db) => ({
       data: db.data[user.id] ?? emptyData(),
@@ -65,6 +71,7 @@ export async function saveUserData(
   data: UserData,
   version: number,
 ) {
+  if (anyNeonConfigured()) return neonStore().saveUserData(user, data, version);
   if (demoEnabled())
     return demoTransaction((db) => {
       db.data[user.id] = data;
@@ -86,6 +93,7 @@ export async function saveScheme(
   user: User,
   scheme: Scheme,
 ) {
+  if (anyNeonConfigured()) return neonStore().saveScheme(user, scheme);
   if (user.role !== 'admin') throw Error('Administrator access is required.');
   if (demoEnabled())
     return demoTransaction((db) => {
@@ -125,6 +133,11 @@ export async function saveEnquiry(
   res: NextResponse,
   enquiry: Enquiry,
 ) {
+  if (anyNeonConfigured()) {
+    const user = await identity(req, res);
+    if (!user) throw Error('Authentication required.');
+    return neonStore().saveEnquiry(user, enquiry);
+  }
   if (demoEnabled())
     return demoTransaction((db) => {
       db.enquiries.push(enquiry);
@@ -139,6 +152,7 @@ export async function appData(
   res: NextResponse,
   user: User | null,
 ): Promise<AppData> {
+  if (anyNeonConfigured()) return neonAppData(user);
   const schemes = await catalogue(req, res, user?.role === 'admin');
   const data = user ? (await userData(req, res, user)).data : emptyData();
   let enquiries: Enquiry[] = [];

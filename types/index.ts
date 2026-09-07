@@ -150,7 +150,7 @@ export type UserData = {
 export type AppData = UserData & {
   user: User | null;
   schemes: Scheme[];
-  mode: 'demo' | 'supabase';
+  mode: 'demo' | 'supabase' | 'neon';
   enquiries: Enquiry[];
   analytics?: {
     users: number;

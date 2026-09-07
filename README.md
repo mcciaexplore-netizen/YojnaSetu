@@ -6,7 +6,9 @@ A connected Next.js application for business profiles, explainable scheme recomm
 
 ## Current delivery status
 
-The local application works with persistent, explicitly labelled demonstration data. The production path uses Supabase Auth, PostgreSQL with row-level security, and a private Supabase Storage bucket. A real Supabase project is not configured in this checkout, so live authentication, live storage, email delivery, and a production deployment have not been exercised. Production never falls back to the local demo database.
+The application supports Neon Auth with Neon PostgreSQL, the existing Supabase backend, and a development-only local demo. For the Neon setup used by this project, follow [NEON_SETUP.md](NEON_SETUP.md). Live account APIs use Neon when its required environment settings are present; incomplete settings fail closed. Production never falls back to the local demo database.
+
+Neon connection credentials have been verified separately. Application schema setup, real email confirmation/recovery, and deployment are explicit steps in the Neon guide.
 
 The 14 seed records are **illustrative product-testing records, not invented claims about actual government schemes**. They have no official URLs and are never marked Verified. All figures and deadlines are examples. Replace them with reviewed official data before offering real application guidance. The app does not claim government affiliation or guaranteed approval.
 
@@ -23,19 +25,19 @@ npm.cmd run dev
 
 Open **http://127.0.0.1:3000**. In PowerShell, use `npm.cmd` if execution policy prevents `npm.ps1` from running. In other shells, use `npm`.
 
-`.env.local` is already created for the delivered local demo. Do not overwrite it if you have subsequently configured Supabase.
+`.env.local` is already created for the delivered local demo. Do not overwrite it if you have subsequently configured Neon or Supabase.
 
 1. Choose Find My Eligible Schemes and create an account with a test email and a password of at least 12 characters.
 2. Complete the six-step profile. Save progress at any step, review, and confirm.
 3. Explore matches, change filters, open a scheme, and save it.
-4. Create a checklist, upload a PDF/PNG/JPEG under 5 MB, and save application updates.
+4. Create a checklist, upload a PDF/PNG/JPEG under 4 MB, and save application updates.
 5. Download recommendations as PDF and saved schemes as CSV.
 
 Local accounts, profiles, uploads, and records persist in `.data/demo.json`, which is excluded from source control. Use test information only. Local mode is a single-instance development adapter, not a production datastore. Passwords use salted PBKDF2; session cookies are HTTP-only with opaque, expiring tokens. Demo mode is disabled whenever `NODE_ENV=production`.
 
 For local administration, register the email explicitly configured in `DEMO_ADMIN_EMAIL` (default `admin@yojanasetu.local`). No default password is shipped. The automated flow suite may create that test account using the password documented in the test source; remove test accounts with the cleanup procedure below before sharing a local machine. Production never derives administrator rights from an email address.
 
-## Connect Supabase
+## Connect Supabase (alternative backend)
 
 1. Create a Supabase project.
 2. In the SQL editor, execute these files in order as the database owner:
@@ -78,7 +80,7 @@ npm run build
 npm start
 ```
 
-Configure the three Supabase/site variables above in the host, set `DEMO_MODE=false`, use an HTTPS site URL, and add the exact deployed `/auth/callback` to Supabase's redirect allowlist. Never upload `.env.local`, `.data`, test artifacts, or the parent IVR project. Configure durable backups and monitoring in the Supabase project.
+For Neon, follow the deployment section of [NEON_SETUP.md](NEON_SETUP.md). For Supabase, configure the three Supabase/site variables above in the host, set `DEMO_MODE=false`, use an HTTPS site URL, and add the exact deployed `/auth/callback` to Supabase's redirect allowlist. Never upload `.env.local`, `.data`, test artifacts, unrelated project folders. Configure durable backups and monitoring in the Supabase project.
 
 The project also preserves the Sites-compatible build adapter:
 

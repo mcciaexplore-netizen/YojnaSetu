@@ -107,8 +107,8 @@ function ApplicationEditor({ application }: { application: Application }) {
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
-                    if (file.size > 5 * 1024 * 1024) {
-                      notice('Choose a file smaller than 5 MB.');
+                    if (file.size > 4 * 1024 * 1024) {
+                      notice('Choose a file smaller than 4 MB.');
                       return;
                     }
                     setUploading(d.name);
@@ -146,7 +146,7 @@ function ApplicationEditor({ application }: { application: Application }) {
             </div>
           ))}
           <p className="subtle">
-            PDF, JPEG, PNG · Maximum 5 MB · Private to your account
+            PDF, JPEG, PNG · Maximum 4 MB · Private to your account
           </p>
         </section>
         <section className="form-grid">

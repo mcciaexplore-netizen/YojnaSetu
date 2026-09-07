@@ -33,7 +33,16 @@ import {
 import { matchScheme, recommendations, searchScheme } from '@/lib/matching';
 import { recommendationsPdf, csvCell } from '@/services/reports';
 import type { Profile, Scheme } from '@/types';
+import { neonConfigured, anyNeonConfigured } from '@/services/backend-config';
+import { handleNeonAuthAction } from '@/services/neon-auth';
+import {
+  saveNeonFile,
+  readNeonFile,
+  deleteNeonFile,
+  saveNeonTaxonomy,
+} from '@/services/neon-db';
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 const limit = new Map<string, { count: number; until: number }>();
 function rateLimit(key: string) {
   const now = Date.now();
@@ -62,16 +71,39 @@ async function handle(req: NextRequest) {
         ok: true,
         configured: liveConfigured(),
         demo: demoEnabled(),
+        provider: neonConfigured()
+          ? 'neon'
+          : demoEnabled()
+            ? 'demo'
+            : liveConfigured()
+              ? 'supabase'
+              : 'unconfigured',
       });
-    if (!liveConfigured() && !demoEnabled())
+    if (
+      (anyNeonConfigured() && !neonConfigured()) ||
+      (!liveConfigured() && !demoEnabled())
+    )
       return NextResponse.json(
         {
           error:
-            'Connect Supabase to use this application. See the setup instructions.',
+            'Complete the database and authentication settings. See the setup instructions.',
         },
         { status: 503 },
       );
     if (req.method === 'POST') requireSameOrigin(req);
+    if (path === 'auth' && req.method === 'POST' && neonConfigured()) {
+      const body = await req.json();
+      rateLimit(
+        'auth:' +
+          String(
+            body?.email ?? req.headers.get('x-forwarded-for') ?? '',
+          ).toLowerCase(),
+      );
+      return responseWithCookies(
+        await handleNeonAuthAction(req, shell, body),
+        shell,
+      );
+    }
     const user = await identity(req, shell);
     if (path === 'auth' && req.method === 'POST') {
       const body = await req.json();
@@ -109,7 +141,7 @@ async function handle(req: NextRequest) {
       if (action === 'forgot') {
         if (!liveConfigured())
           throw Error(
-            'Email recovery is unavailable in local demo mode. Use Supabase for recovery.',
+            'Email recovery is unavailable in local demo mode. Connect live authentication for recovery.',
           );
         const { error } = await supabase(req, shell).auth.resetPasswordForEmail(
           email,
@@ -258,12 +290,15 @@ async function handle(req: NextRequest) {
       });
     }
     if (path === 'upload' && req.method === 'POST') {
-      if (Number(req.headers.get('content-length') ?? 0) > 6 * 1024 * 1024)
-        throw Error('Choose a file smaller than 5 MB.');
+      if (
+        Number(req.headers.get('content-length') ?? 0) >
+        4 * 1024 * 1024 + 128 * 1024
+      )
+        throw Error('Choose a file smaller than 4 MB.');
       const form = await req.formData();
       const file = form.get('file');
-      if (!(file instanceof File) || !file.size || file.size > 5 * 1024 * 1024)
-        throw Error('Choose a PDF, JPEG, or PNG file under 5 MB.');
+      if (!(file instanceof File) || !file.size || file.size > 4 * 1024 * 1024)
+        throw Error('Choose a PDF, JPEG, or PNG file under 4 MB.');
       const bytes = new Uint8Array(await file.arrayBuffer());
       const magic =
         bytes[0] === 0x25 &&
@@ -288,7 +323,10 @@ async function handle(req: NextRequest) {
       const doc = app?.documents.find((d) => d.name === form.get('document'));
       if (!app || !doc) throw Error('Application document was not found.');
       const id = crypto.randomUUID();
-      if (demoEnabled())
+      const previousFileId = doc.fileId;
+      if (neonConfigured())
+        await saveNeonFile(user, app.id, id, magic, file.name, bytes);
+      else if (demoEnabled())
         await demoTransaction((db) => {
           db.files.push({
             id,
@@ -311,11 +349,38 @@ async function handle(req: NextRequest) {
       doc.fileName = file.name;
       doc.complete = true;
       app.updatedAt = new Date().toISOString();
-      await saveUserData(req, shell, user, data, version);
+      try {
+        await saveUserData(req, shell, user, data, version);
+      } catch (error) {
+        if (neonConfigured()) await deleteNeonFile(user, id).catch(() => {});
+        throw error;
+      }
+      if (neonConfigured() && previousFileId)
+        await deleteNeonFile(user, previousFileId).catch(() => {});
       return responseWithCookies({ ok: true }, shell);
     }
     if (path === 'file' && req.method === 'GET') {
       const id = z.string().uuid().parse(req.nextUrl.searchParams.get('id'));
+      if (neonConfigured()) {
+        const file = await readNeonFile(user, id);
+        if (!file)
+          return responseWithCookies(
+            { error: 'Document not found.' },
+            shell,
+            404,
+          );
+        return new NextResponse(Buffer.from(file.bytes), {
+          headers: {
+            'Content-Type': file.mime,
+            'Content-Disposition':
+              'attachment; filename="' +
+              file.name.replace(/[^a-zA-Z0-9. _-]/g, '_') +
+              '"',
+            'Cache-Control': 'private, no-store',
+            'X-Content-Type-Options': 'nosniff',
+          },
+        });
+      }
       if (demoEnabled()) {
         const f = await demoTransaction((db) =>
           db.files.find((f) => f.id === id && f.userId === user.id),
@@ -575,7 +640,7 @@ async function handle(req: NextRequest) {
           user,
           schemeSchema.parse(body.scheme) as Scheme,
         );
-        break;
+        return responseWithCookies({ ok: true }, shell);
       case 'taxonomy':
         if (user.role !== 'admin')
           return responseWithCookies(
@@ -592,7 +657,9 @@ async function handle(req: NextRequest) {
             .min(1)
             .max(100)
             .parse(body.values);
-          if (demoEnabled())
+          if (neonConfigured())
+            await saveNeonTaxonomy(user, kind, [...new Set(values)]);
+          else if (demoEnabled())
             await demoTransaction((db) => {
               db.taxonomy[kind] = [...new Set(values)];
             });
@@ -603,7 +670,7 @@ async function handle(req: NextRequest) {
             if (error) throw Error('Categories could not be saved.');
           }
         }
-        break;
+        return responseWithCookies({ ok: true }, shell);
       default:
         throw Error('This action is not supported.');
     }

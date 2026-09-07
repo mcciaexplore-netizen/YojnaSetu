@@ -16,7 +16,9 @@ export function Auth() {
   const [message, setMessage] = useState(
     params.get('error')
       ? 'That sign-in link is invalid or expired. Request a new one.'
-      : '',
+      : params.get('verified') === '1'
+        ? 'Your email link has been processed. Sign in to continue.'
+        : '',
   );
   const [busy, setBusy] = useState(false);
   return (
@@ -88,13 +90,19 @@ export function Auth() {
                 action: mode,
                 email: f.get('email'),
                 password: f.get('password'),
+                token: mode === 'reset' ? params.get('token') : undefined,
               });
               if (result.confirmation)
                 setMessage(
                   'Check your email to confirm your account, then log in.',
                 );
-              else if (result.message) setMessage(String(result.message));
-              else {
+              else if (result.message) {
+                setMessage(String(result.message));
+                if (mode === 'reset' && result.ok) {
+                  setMode('login');
+                  router.replace('/auth');
+                }
+              } else {
                 const next = params.get('next');
                 router.push(
                   next?.startsWith('/') &&
@@ -179,8 +187,8 @@ export function Auth() {
           </button>
         </div>
         <p className="auth-disclaimer">
-          Local demo accounts are for testing only. Live authentication and
-          email recovery use Supabase when configured.
+          Sign in with your work email to save your business profile and track
+          your applications.
         </p>
       </section>
     </main>
