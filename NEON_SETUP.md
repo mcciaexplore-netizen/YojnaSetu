@@ -61,7 +61,7 @@ Only a database administrator should run this. Account signup cannot select admi
 
 ## 5. Deploy to your existing Vercel project
 
-In Vercel's **yojna-setu** project environment settings, check that the Neon integration supplies `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Add `NEON_AUTH_COOKIE_SECRET` and set `NEXT_PUBLIC_SITE_URL` to the real HTTPS site origin. Set `DEMO_MODE=false`. Choose the corresponding Production, Preview, or Development environment deliberately. Use the same cookie secret across deployments of one environment; changing it invalidates signed session data.
+In Vercel's **yojna-setu-bg8g** project environment settings, check that the Neon integration supplies `DATABASE_URL` and `NEON_AUTH_BASE_URL`. Add `NEON_AUTH_COOKIE_SECRET` and set `NEXT_PUBLIC_SITE_URL` to the real HTTPS site origin. Set `DEMO_MODE=false`. Choose the corresponding Production, Preview, or Development environment deliberately. Use the same cookie secret across deployments of one environment; changing it invalidates signed session data.
 
 For the Auth URL, the app uses a valid `NEON_AUTH_BASE_URL` first. If it is missing or malformed, the app can use the matching integration-provided `VITE_NEON_AUTH_URL` already supplied by Neon. A valid explicit URL always wins, including when the provider returns an error. Keep both variables scoped to the intended Neon branch. Complete copied quotes, `.env` assignments, and identical-label Markdown URL wrappers are normalized before use; URLs must be HTTPS and contain no credentials, query, or fragment.
 
@@ -70,6 +70,12 @@ The public `/api/health` response reports only URL validity, the selected Auth v
 Create the application schema on every database branch used for deployment. Migrations are an explicit setup step, not part of the build. Use Singapore (`sin1`) for Vercel Functions to match this database's region. Redeploy after updating environment variables. An existing deployment does not pick up new variables until rebuilt/redeployed.
 
 Neon owns account authentication and recovery. Application enquiries are stored for administrator review. The existing Supabase email-delivery worker does not run on Neon; scheduled application reminder delivery needs a separate worker before email notifications can be offered.
+
+### Production project and older links
+
+The configured production project is **yojna-setu-bg8g**, with website **https://yojna-setu-bg8g.vercel.app**. Open that project in Vercel when managing authentication settings. The separate **yojna-setu** project has different environment variables; its Ready status only confirms a successful build.
+
+As a temporary migration, `proxy.ts` redirects ordinary GET/HEAD page visits on `yojna-setu-nine.vercel.app` and `yojna-setu-git-main-mccias-projects.vercel.app` to the configured site, only for Vercel Production deployments. It does not transfer sessions or repair the duplicate project's authentication settings. API requests, credential submissions, verification callbacks, reset links, and unknown query parameters stay on their original deployment. Preview deployments retain their own backend. If the canonical domain changes, update this exact mapping and the site's Neon trusted domain together.
 
 ## Verification
 
