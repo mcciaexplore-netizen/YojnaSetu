@@ -11,7 +11,7 @@ import {
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { User } from '@/types';
-import { neonConfigured } from './backend-config';
+import { neonAuthUrl, neonConfigurationError } from './backend-config';
 import { ensureNeonUser } from './neon-db';
 
 const DEV_COOKIE_PREFIX = 'ys_neon_dev';
@@ -109,12 +109,10 @@ function clearNeonCookies(request: NextRequest, response: NextResponse) {
   }
 }
 function config() {
-  if (!neonConfigured())
-    throw new Error(
-      'Complete the Neon database and authentication settings first.',
-    );
+  const error = neonConfigurationError();
+  if (error) throw new Error(error);
   return {
-    baseUrl: process.env.NEON_AUTH_BASE_URL!,
+    baseUrl: neonAuthUrl()!.baseUrl,
     cookieSecret: process.env.NEON_AUTH_COOKIE_SECRET!,
     sameSite: 'lax' as const,
     log: quietLog,

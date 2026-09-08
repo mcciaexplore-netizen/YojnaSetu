@@ -1,4 +1,5 @@
 import nextEnv from '@next/env';
+import { neonAuthUrl } from '../services/backend-config';
 import { Client, neonConfig } from '@neondatabase/serverless';
 
 const requiredTables = [
@@ -60,10 +61,7 @@ async function main() {
   ]);
   const checks: [string, boolean][] = [
     ['DATABASE_URL is a PostgreSQL URL', databaseUrlValid],
-    [
-      'NEON_AUTH_BASE_URL is an HTTPS URL',
-      validUrl(process.env.NEON_AUTH_BASE_URL, ['https:']),
-    ],
+    ['Neon Auth has a valid HTTPS URL', Boolean(neonAuthUrl())],
     [
       'NEON_AUTH_COOKIE_SECRET contains at least 32 characters',
       (process.env.NEON_AUTH_COOKIE_SECRET?.length ?? 0) >= 32,

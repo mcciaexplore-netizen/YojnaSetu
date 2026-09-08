@@ -33,7 +33,12 @@ import {
 import { matchScheme, recommendations, searchScheme } from '@/lib/matching';
 import { recommendationsPdf, csvCell } from '@/services/reports';
 import type { Profile, Scheme } from '@/types';
-import { neonConfigured, anyNeonConfigured } from '@/services/backend-config';
+import {
+  neonConfigured,
+  anyNeonConfigured,
+  neonConfigurationError,
+  neonConfigurationChecks,
+} from '@/services/backend-config';
 import { handleNeonAuthAction } from '@/services/neon-auth';
 import {
   saveNeonFile,
@@ -71,6 +76,7 @@ async function handle(req: NextRequest) {
         ok: true,
         configured: liveConfigured(),
         demo: demoEnabled(),
+        checks: anyNeonConfigured() ? neonConfigurationChecks() : undefined,
         provider: neonConfigured()
           ? 'neon'
           : demoEnabled()
@@ -85,8 +91,9 @@ async function handle(req: NextRequest) {
     )
       return NextResponse.json(
         {
-          error:
-            'Complete the database and authentication settings. See the setup instructions.',
+          error: anyNeonConfigured()
+            ? neonConfigurationError()
+            : 'Complete the database and authentication settings. See the setup instructions.',
         },
         { status: 503 },
       );

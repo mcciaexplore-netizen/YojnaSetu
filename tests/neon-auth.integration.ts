@@ -14,6 +14,7 @@ const originalFetch = globalThis.fetch;
 const keys = [
   'DATABASE_URL',
   'NEON_AUTH_BASE_URL',
+  'VITE_NEON_AUTH_URL',
   'NEON_AUTH_COOKIE_SECRET',
   'NEXT_PUBLIC_SITE_URL',
   'NODE_ENV',
@@ -22,6 +23,7 @@ const keys = [
 const originalEnvironment = new Map(keys.map((key) => [key, process.env[key]]));
 const fakeEnvironment = process.env as Record<string, string | undefined>;
 beforeEach(() => {
+  delete process.env.VITE_NEON_AUTH_URL;
   fakeEnvironment.NODE_ENV = 'test';
   fakeEnvironment.DEMO_MODE = 'true';
   fakeEnvironment.DATABASE_URL = 'postgresql://test:test@database.invalid/test';
@@ -333,4 +335,73 @@ test('email verification callback exchanges the challenge and propagates the new
     response.cookies.get('ys_neon_dev.session_token')?.httpOnly,
     true,
   );
+});
+
+test('copied auth URL wrappers no longer prevent signup from reaching Neon', async () => {
+  fakeEnvironment.NEON_AUTH_BASE_URL =
+    'NEON_AUTH_BASE_URL="https://auth.invalid/auth"';
+  let called = false;
+  globalThis.fetch = async (url) => {
+    called = true;
+    assert.equal(String(url), 'https://auth.invalid/auth/sign-up/email');
+    return Response.json({ token: null });
+  };
+  assert.deepEqual(
+    await handleNeonAuthAction(request(), NextResponse.json({}), {
+      action: 'signup',
+      email: 'member@example.com',
+      password: 'SamplePassword123!',
+    }),
+    { ok: true, confirmation: true },
+  );
+  assert.equal(called, true);
+});
+
+test('the integration auth URL can recover a malformed manually entered URL', async () => {
+  fakeEnvironment.NEON_AUTH_BASE_URL = 'invalid-manual-value';
+  fakeEnvironment.VITE_NEON_AUTH_URL =
+    'https://integration.invalid/neondb/auth';
+  assert.equal(liveConfigured(), true);
+  globalThis.fetch = async (url) => {
+    assert.equal(
+      String(url),
+      'https://integration.invalid/neondb/auth/get-session?disableCookieCache=true',
+    );
+    return Response.json(null);
+  };
+  assert.equal(
+    await neonIdentity(
+      request('ys_neon_dev.session_token=invalid'),
+      NextResponse.json({}),
+    ),
+    null,
+  );
+});
+
+test('unusable auth URLs fail with a named setting error before any request', () => {
+  fakeEnvironment.NEON_AUTH_BASE_URL = 'NEON_AUTH_BASE_URL=not-a-url';
+  assert.equal(liveConfigured(), false);
+  assert.equal(demoEnabled(), false);
+  assert.throws(
+    () => neonRequestAuth(request(), NextResponse.json({})),
+    /Set NEON_AUTH_BASE_URL/,
+  );
+});
+
+test('provider errors never switch a valid explicit Auth URL to another branch', async () => {
+  fakeEnvironment.VITE_NEON_AUTH_URL = 'https://other-branch.invalid/auth';
+  const called: string[] = [];
+  globalThis.fetch = async (url) => {
+    called.push(String(url));
+    return Response.json({ message: 'Unavailable' }, { status: 503 });
+  };
+  await assert.rejects(
+    handleNeonAuthAction(request(), NextResponse.json({}), {
+      action: 'signup',
+      email: 'member@example.com',
+      password: 'SamplePassword123!',
+    }),
+    /temporarily unavailable/,
+  );
+  assert.deepEqual(called, ['https://auth.invalid/auth/sign-up/email']);
 });
