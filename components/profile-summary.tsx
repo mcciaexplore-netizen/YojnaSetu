@@ -37,6 +37,7 @@ const groups = [
       ['investment', 'Investment'],
       ['revenue', 'Annual revenue'],
       ['employees', 'Employees'],
+      ['yearsOperating', 'Years operating'],
     ],
   ],
   ['Registrations', ShieldCheck, [['registrations', 'Your registrations']]],
@@ -45,7 +46,18 @@ const groups = [
     Target,
     [
       ['objectives', 'Support you need'],
-      ['womenOwned', 'Women-owned business'],
+      ['beneficiaryCategory', 'Beneficiary category'],
+    ],
+  ],
+  [
+    'Eligibility details',
+    ShieldCheck,
+    [
+      ['msmeClassification', 'MSME classification'],
+      ['projectType', 'Project type'],
+      ['traditionalClusterParticipation', 'Traditional-industry cluster'],
+      ['greenTechProject', 'Green technology project'],
+      ['ceProject', 'Circular-economy project'],
     ],
   ],
   [
@@ -80,7 +92,9 @@ export function ProfileSummary({ profile }: { profile: Partial<Profile> }) {
                     : 'No'
                   : value === undefined || value === ''
                     ? 'Not specified'
-                    : ['turnover', 'investment', 'revenue'].includes(key)
+                    : key === 'yearsOperating'
+                      ? Number(value).toLocaleString('en-IN') + ' years'
+                      : ['turnover', 'investment', 'revenue'].includes(key)
                       ? '₹' + Number(value).toLocaleString('en-IN')
                       : String(value);
               return (

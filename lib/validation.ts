@@ -48,7 +48,26 @@ export const states = [
   'Lakshadweep',
   'Puducherry',
 ];
+export const msmeClassifications = ['Micro', 'Small', 'Medium', 'Not sure'];
+export const projectTypes = ['Greenfield', 'Brownfield', 'Other', 'Not sure'];
+export const beneficiaryCategories = [
+  'General',
+  'Women',
+  'SC',
+  'ST',
+  'Women + SC',
+  'Women + ST',
+  'SC + ST',
+  'Women + SC + ST',
+  'Not sure',
+];
+export const eligibilityChoices = ['Yes', 'No', 'Not sure'];
 export const businessTypes = [
+  'Individual',
+  'SHG',
+  'Institution',
+  'Cooperative Society',
+  'Charitable Trust',
   'Proprietorship',
   'Partnership',
   'LLP',
@@ -114,6 +133,23 @@ export const profileBaseSchema = z.object({
   investment: money,
   revenue: money,
   employees: z.number().int().min(0).max(1e7),
+  yearsOperating: money.optional(),
+  msmeClassification: z.enum(['Micro', 'Small', 'Medium', 'Not sure']),
+  projectType: z.enum(['Greenfield', 'Brownfield', 'Other', 'Not sure']),
+  beneficiaryCategory: z.enum([
+    'General',
+    'Women',
+    'SC',
+    'ST',
+    'Women + SC',
+    'Women + ST',
+    'SC + ST',
+    'Women + SC + ST',
+    'Not sure',
+  ]),
+  traditionalClusterParticipation: z.enum(['Yes', 'No', 'Not sure']),
+  greenTechProject: z.enum(['Yes', 'No', 'Not sure']),
+  ceProject: z.enum(['Yes', 'No', 'Not sure']),
   registrations: z.array(z.string().max(100)).max(30),
   objectives: z
     .array(z.string().max(100))
@@ -151,6 +187,12 @@ export const draftProfileSchema = profileBaseSchema
     ),
   );
 export const profileSchema = profileBaseSchema.superRefine((p, c) => {
+  if (p.yearsOperating === undefined)
+    c.addIssue({
+      code: 'custom',
+      path: ['yearsOperating'],
+      message: 'Enter how many years the business has operated.',
+    });
   if (p.exporting && !p.exportMarkets.trim())
     c.addIssue({
       code: 'custom',
@@ -180,6 +222,13 @@ export const ruleSchema = z
       'planningExport',
       'objectives',
       'womenOwned',
+      'yearsOperating',
+      'msmeClassification',
+      'projectType',
+      'beneficiaryCategory',
+      'traditionalClusterParticipation',
+      'greenTechProject',
+      'ceProject',
     ]),
     operator: z.enum(['in', 'range', 'all', 'any', 'equals']),
     value: z.union([z.array(z.string()), z.array(z.number()), z.boolean()]),
@@ -297,11 +346,23 @@ export function completeness(p: Partial<z.infer<typeof profileSchema>>) {
     'exporting',
     'planningExport',
     'planningExpansion',
+    'yearsOperating',
+    'msmeClassification',
+    'projectType',
+    'beneficiaryCategory',
+    'traditionalClusterParticipation',
+    'greenTechProject',
+    'ceProject',
   ] as const;
   return Math.round(
     (keys.filter((k) => {
       const v = p[k];
-      return v !== undefined && v !== '' && (!Array.isArray(v) || v.length > 0);
+      return (
+        v !== undefined &&
+        v !== null &&
+        v !== '' &&
+        (!Array.isArray(v) || v.length > 0)
+      );
     }).length /
       keys.length) *
       100,

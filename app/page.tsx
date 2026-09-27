@@ -94,7 +94,7 @@ export default function Home() {
             ))}
           </ol>
           <small>
-            Demo schemes are clearly marked. Always verify before applying.
+            Scheme details summarize the MCCIA PDF. Confirm current terms with the administering authority.
           </small>
         </aside>
       </section>
@@ -164,7 +164,7 @@ export default function Home() {
             ],
             [
               'Is the scheme information verified?',
-              'The initial catalogue uses clearly labelled illustrative demo records. They are not government schemes or verified financial guidance. Always verify official conditions before applying.',
+              'The catalogue summarizes ten scheme records from the MCCIA PDF. The summaries have not been independently verified against current government guidelines; the administering authority makes the final eligibility decision.',
             ],
             [
               'Can I save my progress?',

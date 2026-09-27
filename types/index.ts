@@ -10,7 +10,14 @@ export type RuleField =
   | 'exporting'
   | 'planningExport'
   | 'objectives'
-  | 'womenOwned';
+  | 'womenOwned'
+  | 'yearsOperating'
+  | 'msmeClassification'
+  | 'projectType'
+  | 'beneficiaryCategory'
+  | 'traditionalClusterParticipation'
+  | 'greenTechProject'
+  | 'ceProject';
 export type Rule = {
   id: string;
   field: RuleField;
@@ -42,6 +49,13 @@ export type Profile = {
   planningExpansion: boolean;
   expansionLocation: string;
   womenOwned?: boolean;
+  yearsOperating?: number;
+  msmeClassification: MSMEClassification;
+  projectType: ProjectType;
+  beneficiaryCategory: BeneficiaryCategory;
+  traditionalClusterParticipation: EligibilityChoice;
+  greenTechProject: EligibilityChoice;
+  ceProject: EligibilityChoice;
   step: number;
   confirmed: boolean;
 };
@@ -139,6 +153,19 @@ export type Enquiry = {
   createdAt: string;
 };
 export type User = { id: string; email: string; role: 'user' | 'admin' };
+export type MSMEClassification = 'Micro' | 'Small' | 'Medium' | 'Not sure';
+export type ProjectType = 'Greenfield' | 'Brownfield' | 'Other' | 'Not sure';
+export type BeneficiaryCategory =
+  | 'General'
+  | 'Women'
+  | 'SC'
+  | 'ST'
+  | 'Women + SC'
+  | 'Women + ST'
+  | 'SC + ST'
+  | 'Women + SC + ST'
+  | 'Not sure';
+export type EligibilityChoice = 'Yes' | 'No' | 'Not sure';
 export type UserData = {
   profile: Partial<Profile>;
   saved: Saved[];

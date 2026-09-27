@@ -10,7 +10,12 @@ export function matchScheme(
   const conditions = scheme.rules.map((rule) => {
     const current = profile[rule.field];
     let status: 'pass' | 'fail' | 'unknown' = 'unknown';
-    if (current !== undefined && current !== null && current !== '') {
+    if (
+      current !== undefined &&
+      current !== null &&
+      current !== '' &&
+      current !== 'Not sure'
+    ) {
       let pass = false;
       switch (rule.operator) {
         case 'in':
@@ -67,8 +72,11 @@ export function matchScheme(
   );
   const failed = conditions.some((c) => c.required && c.status === 'fail');
   const unknown = conditions.some((c) => c.status === 'unknown');
+  const requiredUnknown = conditions.some(
+    (c) => c.required && c.status === 'unknown',
+  );
   let score = total ? Math.round((passed / total) * 100) : 0;
-  if (failed) score = Math.min(score, 49);
+  if (failed || requiredUnknown) score = Math.min(score, 49);
   return {
     scheme,
     score,
@@ -81,7 +89,7 @@ export function matchScheme(
             ? 'Potential Match'
             : 'Low relevance',
     conditions,
-    eligible: !failed && !unknown && scheme.rules.length > 0 && !expired,
+    eligible: !failed && !requiredUnknown && scheme.rules.length > 0 && !expired,
     needsVerification: unknown || scheme.demo || scheme.status !== 'Verified',
   };
 }
@@ -89,7 +97,7 @@ export function recommendations(profile: Partial<Profile>, schemes: Scheme[]) {
   return schemes
     .filter((s) => !['Draft', 'Archived', 'Expired'].includes(s.status))
     .map((s) => matchScheme(profile, s))
-    .filter((m) => m.score >= 50)
+    .filter((m) => m.eligible && m.score >= 50)
     .sort((a, b) => b.score - a.score);
 }
 export function searchScheme(s: Scheme, query: string) {

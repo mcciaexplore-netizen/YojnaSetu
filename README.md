@@ -10,7 +10,7 @@ The application supports Neon Auth with Neon PostgreSQL, the existing Supabase b
 
 Neon connection credentials have been verified separately. Application schema setup, real email confirmation/recovery, and deployment are explicit steps in the Neon guide.
 
-The 14 seed records are **illustrative product-testing records, not invented claims about actual government schemes**. They have no official URLs and are never marked Verified. All figures and deadlines are examples. Replace them with reviewed official data before offering real application guidance. The app does not claim government affiliation or guaranteed approval.
+The ten catalogue records summarize the schemes and criteria in `Copy of Govt Schemes Updated.pdf` (MCCIA source document, pages 4–13). They are marked Needs Review because the PDF is not an administering authority's current guideline. Recommendations require all recorded required criteria to pass; unknown or failed requirements are excluded. Confirm current terms and final eligibility with the administering authority.
 
 ## Run locally
 

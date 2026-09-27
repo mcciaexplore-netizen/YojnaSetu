@@ -169,7 +169,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <div className="family-data-note">
         <ShieldCheck size={14} />
         {data.mode === 'demo'
-          ? 'Local demo · Illustrative scheme records. Verify official guidelines before applying.'
+          ? 'Local demo · Scheme summaries based on the MCCIA PDF; confirm current guidelines before applying.'
           : 'Verify official scheme guidelines before applying.'}
       </div>
       <McciaFooter />

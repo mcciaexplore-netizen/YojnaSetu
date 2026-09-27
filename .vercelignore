@@ -1,0 +1,14 @@
+.git/
+node_modules/
+.next/
+.env*
+.data/
+.openai/
+.codex/
+.agents/
+.vinext/
+.wrangler/
+dist/
+coverage/
+tests/artifacts/
+*.tsbuildinfo

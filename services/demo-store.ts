@@ -24,6 +24,7 @@ export type DemoDatabase = {
   enquiries: Enquiry[];
   taxonomy: Record<string, string[]>;
   audit: { userId: string; action: string; at: string }[];
+  schemeCatalogVersion?: number;
   files: {
     id: string;
     userId: string;
@@ -58,7 +59,20 @@ export async function demoTransaction<T>(
         audit: [],
         files: [],
         taxonomy: { industries, states, categories: objectives },
+        schemeCatalogVersion: 1,
       };
+    }
+    // Upgrade the local catalogue once, keeping accounts and profile data intact.
+    if (db.schemeCatalogVersion !== 1) {
+      const sourceIds = new Set(seedSchemes.map((scheme) => scheme.id));
+      db.schemes = db.schemes
+        .map((scheme) =>
+          scheme.demo || sourceIds.has(scheme.id)
+            ? { ...scheme, status: 'Archived' as const }
+            : scheme,
+        )
+        .concat(seedSchemes);
+      db.schemeCatalogVersion = 1;
     }
     const result = await fn(db);
     await fs.writeFile(file + '.tmp', JSON.stringify(db), { mode: 0o600 });

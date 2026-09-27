@@ -46,7 +46,14 @@ const profile = {
   investment: 1500000,
   revenue: 2500000,
   employees: 12,
-  registrations: ['Udyam Registration', 'PAN', 'IEC'],
+  yearsOperating: 5,
+  msmeClassification: 'Small',
+  projectType: 'Brownfield',
+  beneficiaryCategory: 'General',
+  traditionalClusterParticipation: 'Yes',
+  greenTechProject: 'Yes',
+  ceProject: 'Yes',
+  registrations: ['Udyam Registration', 'GST Registration', 'PAN', 'IEC'],
   objectives: ['Machinery purchase', 'Export', 'Digitalisation'],
   exporting: false,
   exportMarkets: '',
@@ -110,9 +117,9 @@ await a.action('profile', { profile });
 let state = (await a.request('data')).data;
 assert.equal(state.profile.confirmed, true);
 assert.ok(state.notifications.length);
-assert.ok(state.schemes.length >= 14);
+assert.ok(state.schemes.length >= 10);
 console.log('PASS profile confirmation and matching');
-const id = 'demo-machinery';
+const id = 'cgtmse';
 await a.action('save', { schemeId: id });
 await a.action('saved-notes', { schemeId: id, notes: 'Keep for next quarter' });
 await a.action('checklist', { schemeId: id });
@@ -293,7 +300,7 @@ for (const path of [
   '/dashboard',
   '/profile',
   '/schemes',
-  '/schemes/demo-machinery',
+  '/schemes/cgtmse',
   '/saved',
   '/applications',
   '/notifications',

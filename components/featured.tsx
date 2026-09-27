@@ -17,8 +17,7 @@ export function Featured() {
       <span className="eyebrow">EXPLORE WHAT’S POSSIBLE</span>
       <h2>Support for your next move.</h2>
       <p className="featured-caption">
-        Illustrative opportunities from the scheme catalogue. Demo data — verify
-        before application.
+        Scheme summaries based on the MCCIA PDF. Confirm current terms with the administering authority.
       </p>
       <div className="scheme-grid">
         {schemes.map((s) => (

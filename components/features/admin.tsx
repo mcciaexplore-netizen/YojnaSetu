@@ -433,10 +433,12 @@ export function Admin() {
               />
               <small>
                 Fields: industry, state, businessType, stage, turnover,
-                investment, employees, registrations, objectives, exporting,
-                planningExport, womenOwned. Operators: in, range, all, any,
-                equals. Each rule needs id, field, operator, value, label,
-                required, weight.
+                investment, employees, yearsOperating, msmeClassification,
+                projectType, beneficiaryCategory,
+                traditionalClusterParticipation, greenTechProject, ceProject,
+                registrations, objectives, exporting, planningExport. Operators:
+                in, range, all, any, equals. Each rule needs id, field, operator,
+                value, label, required, weight.
               </small>
             </label>
           </div>

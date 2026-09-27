@@ -9,6 +9,10 @@ import {
   businessTypes,
   stages,
   registrations,
+  msmeClassifications,
+  projectTypes,
+  beneficiaryCategories,
+  eligibilityChoices,
 } from '@/lib/validation';
 import { ProfileSummary } from '@/components/profile-summary';
 import { Workflow } from '@/components/workflow';
@@ -27,7 +31,21 @@ const steps = [
 ];
 const stepFields: (keyof Profile)[][] = [
   ['businessName', 'businessType'],
-  ['industry', 'activity', 'state', 'district', 'city', 'stage'],
+  [
+    'industry',
+    'activity',
+    'state',
+    'district',
+    'city',
+    'stage',
+    'yearsOperating',
+    'msmeClassification',
+    'projectType',
+    'beneficiaryCategory',
+    'traditionalClusterParticipation',
+    'greenTechProject',
+    'ceProject',
+  ],
   ['turnover', 'investment', 'revenue', 'employees'],
   ['registrations'],
   ['objectives'],
@@ -50,6 +68,13 @@ export function ProfileWizard() {
       district: '',
       city: '',
       stage: '',
+      yearsOperating: undefined,
+      msmeClassification: 'Not sure',
+      projectType: 'Not sure',
+      beneficiaryCategory: 'Not sure',
+      traditionalClusterParticipation: 'Not sure',
+      greenTechProject: 'Not sure',
+      ceProject: 'Not sure',
       registrations: [],
       objectives: [],
       exporting: false,
@@ -67,7 +92,6 @@ export function ProfileWizard() {
     watch,
     trigger,
     getValues,
-    setValue,
     formState: { errors },
   } = form;
   async function save(next = step) {
@@ -77,6 +101,7 @@ export function ProfileWizard() {
       'investment',
       'revenue',
       'employees',
+      'yearsOperating',
     ] as const) {
       if (!Number.isFinite(values[key]))
         delete (values as Partial<Profile>)[key];
@@ -198,6 +223,38 @@ export function ProfileWizard() {
                       {field('district', 'District')}
                       {field('city', 'City')}
                       {field('stage', 'Business stage', stages)}
+                      {field(
+                        'yearsOperating',
+                        'Years the business has operated',
+                        undefined,
+                        true,
+                      )}
+                      {field(
+                        'msmeClassification',
+                        'MSME classification',
+                        msmeClassifications,
+                      )}
+                      {field('projectType', 'Project type', projectTypes)}
+                      {field(
+                        'beneficiaryCategory',
+                        'Beneficiary category',
+                        beneficiaryCategories,
+                      )}
+                      {field(
+                        'traditionalClusterParticipation',
+                        'Part of a traditional-industry cluster?',
+                        eligibilityChoices,
+                      )}
+                      {field(
+                        'greenTechProject',
+                        'Does the project adopt green technology?',
+                        eligibilityChoices,
+                      )}
+                      {field(
+                        'ceProject',
+                        'Does it upgrade or expand a circular-economy (CE) project?',
+                        eligibilityChoices,
+                      )}
                     </>
                   )}
                   {step === 2 && (
@@ -264,30 +321,6 @@ export function ProfileWizard() {
                           {errors.objectives.message}
                         </p>
                       )}
-                      <label className="field">
-                        Is the business women-owned?
-                        <select
-                          value={
-                            watch('womenOwned') === undefined
-                              ? 'unknown'
-                              : String(watch('womenOwned'))
-                          }
-                          onChange={(e) =>
-                            setValue(
-                              'womenOwned',
-                              e.target.value === 'unknown'
-                                ? undefined
-                                : e.target.value === 'true',
-                            )
-                          }
-                        >
-                          <option value="unknown">
-                            Not specified / needs verification
-                          </option>
-                          <option value="true">Yes</option>
-                          <option value="false">No</option>
-                        </select>
-                      </label>
                     </>
                   )}
                   {step === 5 && (

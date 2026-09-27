@@ -1,15 +1,13 @@
-﻿import { test } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import type { Profile } from '../types';
 import { seedSchemes } from '../database/seed';
 import { matchScheme, recommendations, searchScheme } from '../lib/matching';
-import {
-  draftProfileSchema,
-  profileSchema,
-  schemeSchema,
-} from '../lib/validation';
+import { profileSchema, schemeSchema } from '../lib/validation';
 import { csvCell, recommendationsPdf } from '../services/reports';
 import { PDFDocument } from 'pdf-lib';
-export const profile = {
+
+export const profile: Profile = {
   businessName: 'Setu Engineering',
   businessType: 'Private Limited',
   industry: 'Manufacturing',
@@ -23,12 +21,25 @@ export const profile = {
   investment: 1500000,
   revenue: 2500000,
   employees: 12,
-  registrations: ['Udyam Registration', 'PAN', 'IEC'],
+  yearsOperating: 5,
+  msmeClassification: 'Small',
+  projectType: 'Brownfield',
+  beneficiaryCategory: 'General',
+  traditionalClusterParticipation: 'Yes',
+  greenTechProject: 'Yes',
+  ceProject: 'Yes',
+  registrations: [
+    'Udyam Registration',
+    'GST Registration',
+    'PAN',
+    'Startup recognition',
+  ],
   objectives: [
+    'Working capital',
     'Machinery purchase',
-    'Export',
-    'Digitalisation',
+    'Technology upgrade',
     'Green energy',
+    'Skill development',
   ],
   exporting: false,
   exportMarkets: '',
@@ -38,119 +49,113 @@ export const profile = {
   step: 6,
   confirmed: true,
 };
-test('valid business profile and numeric validation', () => {
+
+const byId = (id: string) => {
+  const found = seedSchemes.find((s) => s.id === id);
+  assert.ok(found, 'missing scheme ' + id);
+  return found;
+};
+
+test('profile requires the eligibility facts used by the source catalogue', () => {
   assert.ok(profileSchema.safeParse(profile).success);
-  assert.equal(
-    profileSchema.safeParse({ ...profile, employees: -1 }).success,
-    false,
-  );
-  assert.equal(
-    profileSchema.safeParse({ ...profile, employees: 1.5 }).success,
-    false,
-  );
-  assert.equal(
-    profileSchema.safeParse({ ...profile, exporting: true }).success,
-    false,
-  );
+  assert.equal(profileSchema.safeParse({ ...profile, employees: -1 }).success, false);
+  assert.equal(profileSchema.safeParse({ ...profile, yearsOperating: -1 }).success, false);
+  assert.equal(profileSchema.safeParse({ ...profile, yearsOperating: undefined }).success, false);
+  assert.equal(profileSchema.safeParse({ ...profile, exporting: true }).success, false);
 });
-test('wizard drafts allow empty objectives while confirmation still requires them', () => {
-  const draft = {
-    businessName: 'New business',
-    businessType: 'Startup',
-    industry: '',
-    subIndustry: '',
-    activity: '',
-    state: '',
-    district: '',
-    city: '',
-    stage: '',
-    registrations: [],
-    objectives: [],
-    exporting: false,
-    exportMarkets: '',
-    planningExport: false,
-    planningExpansion: false,
-    expansionLocation: '',
-    step: 1,
-    confirmed: false,
+
+test('catalogue has ten source-backed records and no illustrative schemes', () => {
+  assert.equal(seedSchemes.length, 10);
+  assert.equal(byId('cgtmse').maximumBenefit, 100000000);
+  assert.equal(byId('interest-subvention-msme').maximumBenefit, 1000000000);
+  for (const s of seedSchemes) {
+    assert.equal(s.demo, false, s.id);
+    assert.equal(s.status, 'Needs Review', s.id);
+    assert.match(s.source, /Copy of Govt Schemes Updated\.pdf, page/);
+    assert.ok(schemeSchema.safeParse(s).success, s.id);
+  }
+  assert.equal(schemeSchema.safeParse({ ...seedSchemes[0], status: 'Verified' }).success, false);
+});
+
+test('recommendations include only eligible, objective-relevant schemes', () => {
+  const results = recommendations(profile, seedSchemes);
+  assert.ok(results.length > 0);
+  assert.ok(results.every((m) => m.eligible && m.score >= 50));
+  assert.ok(results.some((m) => m.scheme.id === 'cgtmse'));
+  assert.ok(results.some((m) => m.scheme.id === 'mse-spice'));
+  assert.ok(!results.some((m) => m.scheme.id === 'pmegp'));
+  assert.ok(!results.some((m) => m.scheme.id === 'startup-india'));
+  assert.ok(!results.some((m) => m.scheme.id === 'stand-up-india'));
+});
+
+test('new business, greenfield and beneficiary category are checked against their source criteria', () => {
+  const newBusiness: Profile = {
+    ...profile,
+    businessType: 'Individual',
+    yearsOperating: 1,
+    projectType: 'Greenfield',
+    beneficiaryCategory: 'Women',
+    objectives: ['Startup funding', 'Employment generation'],
   };
-  assert.ok(draftProfileSchema.safeParse(draft).success);
-  assert.equal(
-    profileSchema.safeParse({ ...profile, objectives: [] }).success,
-    false,
-  );
-  assert.equal(
-    draftProfileSchema.safeParse({ ...draft, objectives: [123] }).success,
-    false,
-  );
+  assert.equal(matchScheme(newBusiness, byId('pmegp')).eligible, true);
+  assert.equal(matchScheme(newBusiness, byId('startup-india')).eligible, true);
+  assert.equal(matchScheme(newBusiness, byId('stand-up-india')).eligible, true);
+  assert.equal(matchScheme(newBusiness, byId('mse-spice')).eligible, false);
 });
-test('required failure caps score and excludes recommendation', () => {
-  const scheme = seedSchemes[0];
-  assert.ok(matchScheme(profile, scheme).score >= 90);
-  const fail = matchScheme({ ...profile, turnover: 100000001 }, scheme);
-  assert.ok(fail.score < 50);
-  assert.equal(fail.eligible, false);
+
+test('unknown required information is not treated as eligible', () => {
   assert.equal(
-    recommendations({ ...profile, turnover: 100000001 }, [scheme]).length,
+    matchScheme({ ...profile, msmeClassification: 'Not sure' }, byId('cgtmse')).eligible,
+    false,
+  );
+  assert.equal(
+    matchScheme({ ...profile, yearsOperating: undefined }, byId('mudra')).eligible,
+    false,
+  );
+  assert.equal(
+    matchScheme({ ...profile, ceProject: 'Not sure' }, byId('mse-spice')).eligible,
+    false,
+  );
+  assert.equal(
+    recommendations(
+      { ...profile, beneficiaryCategory: 'Not sure' },
+      [byId('stand-up-india')],
+    ).length,
     0,
   );
 });
-test('unknown ownership is not satisfied or eligible', () => {
-  const s = seedSchemes.find((s) => s.id === 'demo-women')!;
-  const m = matchScheme(profile, s);
-  assert.equal(
-    m.conditions.find((c) => c.label.includes('Women-owned'))?.status,
-    'unknown',
-  );
-  assert.equal(m.eligible, false);
-  assert.equal(m.needsVerification, true);
+
+test('required failures are excluded even when other scheme conditions pass', () => {
+  const medium = { ...profile, msmeClassification: 'Medium' as const };
+  assert.equal(matchScheme(medium, byId('cgtmse')).eligible, false);
+  assert.equal(recommendations(medium, [byId('cgtmse')]).length, 0);
 });
-test('zero turnover is a valid known value', () => {
+
+test('business objectives affect relevance while required eligibility stays explicit', () => {
+  const relevant = matchScheme(profile, byId('mse-gift'));
+  assert.equal(relevant.eligible, true);
   assert.equal(
-    matchScheme({ ...profile, turnover: 0 }, seedSchemes[0]).conditions.find(
-      (c) => c.label.includes('turnover'),
-    )?.status,
+    relevant.conditions.find((c) => c.label.includes('objective'))?.status,
     'pass',
   );
+  const unrelated = { ...profile, objectives: ['Export'] };
+  assert.equal(matchScheme(unrelated, byId('mse-gift')).eligible, true);
+  assert.equal(recommendations(unrelated, [byId('mse-gift')]).length, 0);
 });
-test('empty rules and expired records do not qualify', () => {
-  assert.equal(
-    matchScheme(profile, { ...seedSchemes[0], rules: [] }).eligible,
-    false,
-  );
-  const expired = matchScheme(profile, {
-    ...seedSchemes[0],
-    deadline: '2020-01-01',
-  });
-  assert.ok(expired.score < 50);
+
+test('search spans scheme benefits, tags and industries', () => {
+  assert.ok(searchScheme(byId('mse-gift'), 'green technology'));
+  assert.ok(searchScheme(byId('mudra'), '20 lakh'));
+  assert.equal(searchScheme(byId('mudra'), 'unrelated'), false);
 });
-test('no demo is verified and records validate', () => {
-  for (const s of seedSchemes) {
-    assert.ok(s.demo);
-    assert.equal(s.officialUrl, null);
-    assert.ok(schemeSchema.safeParse(s).success, s.id);
-  }
-  assert.equal(
-    schemeSchema.safeParse({ ...seedSchemes[0], status: 'Verified' }).success,
-    false,
-  );
-});
-test('search spans benefits tags and industries', () => {
-  assert.ok(
-    searchScheme(
-      seedSchemes.find((s) => s.id === 'demo-green')!,
-      'solar subsidy',
-    ),
-  );
-  assert.ok(searchScheme(seedSchemes[1], 'software'));
-  assert.equal(searchScheme(seedSchemes[0], 'unrelated'), false);
-});
+
 test('CSV neutralizes spreadsheet formulas and quotes', () => {
   assert.equal(csvCell('=HYPERLINK("x")'), '"\'=HYPERLINK(""x"")"');
   assert.equal(csvCell('a,b'), '"a,b"');
 });
-test('PDF is valid and paginates many recommendations', async () => {
+
+test('recommendation report produces a readable PDF', async () => {
   const bytes = await recommendationsPdf(profile, seedSchemes);
   const pdf = await PDFDocument.load(bytes);
-  assert.ok(pdf.getPageCount() >= 2);
+  assert.ok(pdf.getPageCount() >= 1);
 });

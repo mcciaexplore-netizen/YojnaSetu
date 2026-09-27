@@ -75,7 +75,7 @@ export function Schemes() {
     .map((s) => matchScheme(data.profile, s))
     .filter(
       (m) =>
-        (!onlyMatches || m.score >= 50) &&
+        (!onlyMatches || (m.eligible && m.score >= 50)) &&
         (eligibility === 'All' ||
           (eligibility === 'High match' && m.score >= 75) ||
           (eligibility === 'Potential match' && m.score >= 50 && m.score < 75)),
@@ -115,7 +115,7 @@ export function Schemes() {
             </span>
             <div>
               <small>YOUR SCHEME MATCH</small>
-              <h2>{matches.length} opportunities to explore</h2>
+              <h2>{matches.length} relevant and eligible schemes</h2>
               <p>Based on {data.profile.businessName}’s business profile</p>
             </div>
           </div>

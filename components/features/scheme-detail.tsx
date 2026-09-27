@@ -170,7 +170,7 @@ export function SchemeDetail({ id }: { id: string }) {
             <p>{scheme.benefit}</p>
             {scheme.subsidyPercentage !== null && (
               <p>
-                Illustrative subsidy percentage: {scheme.subsidyPercentage}%
+                Recorded rate / subsidy figure: {scheme.subsidyPercentage}%
               </p>
             )}
             <p>
@@ -219,15 +219,18 @@ export function SchemeDetail({ id }: { id: string }) {
               </a>
             ) : (
               <p className="notice">
-                No official application link is available for this illustrative
-                record.
+                No official application link is recorded in the MCCIA source PDF.
               </p>
             )}
           </section>
         </div>
         <aside>
           <div className="panel action-card">
-            <StatusBadge tone="green">YOUR SCHEME MATCH</StatusBadge>
+            <StatusBadge tone={match.eligible ? 'green' : 'orange'}>
+              {match.eligible
+                ? 'RECORDED CONDITIONS PASS'
+                : 'ELIGIBILITY NOT ESTABLISHED'}
+            </StatusBadge>
             <strong
               className={
                 'big-score score-' +
@@ -261,7 +264,7 @@ export function SchemeDetail({ id }: { id: string }) {
             </p>
             <div className="benefit">
               <small>POTENTIAL BENEFIT</small>
-              <strong>Up to INR {scheme.maximumBenefit / 100000} lakh</strong>
+              <strong>{scheme.benefit}</strong>
             </div>
             <Button
               disabled={busy || expired}

@@ -81,8 +81,7 @@ export function SchemeCard({
       <p className="scheme-description">{scheme.description}</p>
       <div className="scheme-facts">
         <span>
-          <strong>Potential benefit</strong> Up to INR{' '}
-          {(scheme.maximumBenefit / 100000).toLocaleString('en-IN')} lakh ·{' '}
+          <strong>Potential benefit</strong> {scheme.benefit} ·{' '}
           {scheme.fundingType}
         </span>
         <span className="scheme-deadline">
